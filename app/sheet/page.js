@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import CharacterPageMain from '../components/CharacterPageMain';
 import CharacterPageBackstory from '../components/CharacterPageBackstory';
 import CharacterPageSpells from '../components/CharacterPageSpells';
+import EditableField from '../components/EditableField'; // <-- ¡AQUÍ ESTÁ LA LÍNEA QUE FALTABA!
 import isEqual from 'lodash/isEqual';
 
 export default function SheetPage() {

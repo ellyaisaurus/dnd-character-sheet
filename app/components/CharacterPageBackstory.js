@@ -1,35 +1,35 @@
 import EditableField from './EditableField';
 
-export default function CharacterPageBackstory({ character, onFieldUpdate }) {
+export default function CharacterPageBackstory({ character, onUpdate }) {
     return (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div className="grid-col">
                 <div className="sheet-box">
-                    <h3>Appearance</h3>
+                    <h3>Apariencia</h3>
                     <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                        <EditableField fieldName="age" label="Age" initialValue={character.age} onUpdate={onFieldUpdate} />
-                        <EditableField fieldName="height" label="Height" initialValue={character.height} onUpdate={onFieldUpdate} />
-                        <EditableField fieldName="weight" label="Weight" initialValue={character.weight} onUpdate={onFieldUpdate} />
+                        <EditableField fieldName="age" label="Edad" value={character.age} onUpdate={onUpdate} />
+                        <EditableField fieldName="height" label="Altura" value={character.height} onUpdate={onUpdate} />
+                        <EditableField fieldName="weight" label="Peso" value={character.weight} onUpdate={onUpdate} />
                     </div>
                     <div style={{ display: 'flex', gap: '15px' }}>
-                        <EditableField fieldName="eyes" label="Eyes" initialValue={character.eyes} onUpdate={onFieldUpdate} />
-                        <EditableField fieldName="skin" label="Skin" initialValue={character.skin} onUpdate={onFieldUpdate} />
-                        <EditableField fieldName="hair" label="Hair" initialValue={character.hair} onUpdate={onFieldUpdate} />
+                        <EditableField fieldName="eyes" label="Ojos" value={character.eyes} onUpdate={onUpdate} />
+                        <EditableField fieldName="skin" label="Piel" value={character.skin} onUpdate={onUpdate} />
+                        <EditableField fieldName="hair" label="Pelo" value={character.hair} onUpdate={onUpdate} />
                     </div>
                 </div>
                 <div className="sheet-box">
-                    <h3>Character Appearance</h3>
-                    <EditableField as="textarea" fieldName="characterAppearance" initialValue={character.characterAppearance} onUpdate={onFieldUpdate} />
+                    <h3>Apariencia del Personaje</h3>
+                    <EditableField as="textarea" fieldName="characterAppearance" value={character.characterAppearance} onUpdate={onUpdate} />
                 </div>
                 <div className="sheet-box">
-                    <h3>Allies & Organizations</h3>
-                    <EditableField as="textarea" fieldName="alliesAndOrganizations" initialValue={character.alliesAndOrganizations} onUpdate={onFieldUpdate} />
+                    <h3>Aliados y Organizaciones</h3>
+                    <EditableField as="textarea" fieldName="alliesAndOrganizations" value={character.alliesAndOrganizations} onUpdate={onUpdate} />
                 </div>
             </div>
             <div className="grid-col">
                 <div className="sheet-box" style={{height: '100%'}}>
-                    <h3>Character Backstory</h3>
-                    <EditableField as="textarea" fieldName="characterBackstory" initialValue={character.characterBackstory} onUpdate={onFieldUpdate} />
+                    <h3>Historia del Personaje</h3>
+                    <EditableField as="textarea" fieldName="characterBackstory" value={character.characterBackstory} onUpdate={onUpdate} />
                 </div>
             </div>
         </div>

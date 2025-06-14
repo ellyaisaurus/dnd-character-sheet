@@ -34,11 +34,16 @@ const SpellLevelSchema = new mongoose.Schema({
 });
 
 const CharacterSchema = new mongoose.Schema({
+    savingThrowOverrides: { type: Map, of: Number, default: {} },
+    skillOverrides: { type: Map, of: Number, default: {} },
+
+    passiveWisdom: { type: Number, default: 10 },
     userId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        unique: true
+        unique: true,
+
     },
     
     characterName: { type: String, default: 'Nameless Hero' },

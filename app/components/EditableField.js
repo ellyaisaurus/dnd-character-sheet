@@ -1,48 +1,47 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { debounce } from 'lodash';
+export default function EditableField({
+    fieldName,
+    value,
+    label,
+    type = 'text',
+    as = 'input',
+    onUpdate,
+    containerClass = 'header-field',
+    inputClass = ''
+}) {
+    const handleChange = (e) => {
+        const rawValue = e.target.value;
+        let finalValue = rawValue;
 
-export default function EditableField({ fieldName, initialValue, label, type = 'text', as = 'input', onUpdate }) {
-  const [value, setValue] = useState(initialValue);
+        if (type === 'number') {
+            finalValue = rawValue === '' ? 0 : Number(rawValue);
+        }
+        
+        // Para campos anidados como 'currency.cp'
+        if (fieldName.includes('.')) {
+            const keys = fieldName.split('.');
+            const updatedNestedField = { [keys[1]]: finalValue };
+            onUpdate({ [keys[0]]: updatedNestedField });
+        } else {
+            onUpdate({ [fieldName]: finalValue });
+        }
+    };
 
-  const debouncedSave = useCallback(
-    debounce(async (newValue) => {
-      // RUTA CORREGIDA: Apuntamos a la URL correcta de la API
-      const res = await fetch('/api/character/update-field', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ field: fieldName, value: newValue }),
-      });
-      if (res.ok && onUpdate) {
-        const data = await res.json();
-        // Pasamos el objeto de personaje completo para actualizar el estado principal
-        onUpdate(data.character);
-      }
-    }, 1000),
-    [fieldName, onUpdate]
-  );
+    const InputComponent = as;
 
-  const handleChange = (e) => {
-    const newValue = type === 'number' ? (e.target.value === '' ? 0 : Number(e.target.value)) : e.target.value;
-    setValue(newValue);
-    debouncedSave(newValue);
-  };
-
-  const InputComponent = as;
-
-  return (
-    <div className="header-field">
-      {label && <label htmlFor={fieldName}>{label}</label>}
-      <InputComponent
-        id={fieldName}
-        name={fieldName}
-        type={type}
-        value={value || ''} // Aseguramos que el valor nunca sea null o undefined
-        onChange={handleChange}
-        className={as === 'textarea' ? 'sheet-textarea' : ''}
-        placeholder={label}
-      />
-    </div>
-  );
+    return (
+        <div className={containerClass}>
+            {label && <label htmlFor={fieldName}>{label}</label>}
+            <InputComponent
+                id={fieldName}
+                name={fieldName}
+                type={type}
+                value={value || ''}
+                onChange={handleChange}
+                className={`${as === 'textarea' ? 'sheet-textarea' : ''} ${inputClass}`}
+                placeholder={label}
+            />
+        </div>
+    );
 }

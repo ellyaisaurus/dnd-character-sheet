@@ -1,48 +1,38 @@
 'use client';
 import { useState } from 'react';
+import { FaTrash } from 'react-icons/fa';
 
-export default function EquipmentManager({ initialEquipment, onUpdate }) {
-    const [equipment, setEquipment] = useState(initialEquipment);
+export default function EquipmentManager({ equipment, onUpdate }) {
     const [newItemName, setNewItemName] = useState('');
 
-    const handleAddItem = async (e) => {
+    const handleAddItem = (e) => {
         e.preventDefault();
         if (!newItemName.trim()) return;
-
-        const res = await fetch('/api/character/equipment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newItemName, quantity: 1 }),
-        });
-        if (res.ok) {
-            const updatedEquipment = await res.json();
-            setEquipment(updatedEquipment);
-            onUpdate({ equipment: updatedEquipment });
-            setNewItemName('');
-        }
+        const newItem = { name: newItemName, quantity: 1 };
+        onUpdate({ equipment: [...equipment, newItem] });
+        setNewItemName('');
     };
 
-    const handleRemoveItem = async (itemId) => {
-        const res = await fetch('/api/character/equipment', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ itemId }),
-        });
-        if (res.ok) {
-            const updatedEquipment = await res.json();
-            setEquipment(updatedEquipment);
-            onUpdate({ equipment: updatedEquipment });
-        }
+    const handleRemoveItem = (index) => {
+        const newEquipment = equipment.filter((_, i) => i !== index);
+        onUpdate({ equipment: newEquipment });
+    };
+
+    const handleUpdateItem = (index, field, value) => {
+        const newEquipment = [...equipment];
+        newEquipment[index] = { ...newEquipment[index], [field]: value };
+        onUpdate({ equipment: newEquipment });
     };
 
     return (
         <div className="sheet-box">
-            <h3>Equipment</h3>
+            <h3>Equipo</h3>
             <ul className="equipment-list">
-                {equipment.map(item => (
-                    <li key={item._id}>
-                        <span>{item.name} (x{item.quantity})</span>
-                        <button onClick={() => handleRemoveItem(item._id)} className="remove-btn">X</button>
+                {equipment.map((item, index) => (
+                    <li key={index}>
+                        <input type="number" value={item.quantity} onChange={(e) => handleUpdateItem(index, 'quantity', Number(e.target.value))} className="equipment-quantity" />
+                        <input type="text" value={item.name} onChange={(e) => handleUpdateItem(index, 'name', e.target.value)} className="equipment-name" />
+                        <button onClick={() => handleRemoveItem(index)} className="remove-btn"><FaTrash /></button>
                     </li>
                 ))}
             </ul>
@@ -51,9 +41,9 @@ export default function EquipmentManager({ initialEquipment, onUpdate }) {
                     type="text"
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    placeholder="New item name"
+                    placeholder="Nombre del nuevo objeto"
                 />
-                <button type="submit" style={{ width: 'auto' }}>Add</button>
+                <button type="submit" style={{ width: 'auto' }}>Añadir</button>
             </form>
         </div>
     );

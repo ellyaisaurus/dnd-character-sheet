@@ -3,118 +3,112 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import EditableField from '../components/EditableField';
 import CharacterPageMain from '../components/CharacterPageMain';
 import CharacterPageBackstory from '../components/CharacterPageBackstory';
 import CharacterPageSpells from '../components/CharacterPageSpells';
-
-const SAVING_THROWS = ['Strength', 'Dexterity', 'Constitution', 'Intelligence', 'Wisdom', 'Charisma'];
+import isEqual from 'lodash/isEqual';
 
 export default function SheetPage() {
-    const { status } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
-    const [character, setCharacter] = useState(null);
+    
+    const [originalCharacter, setOriginalCharacter] = useState(null);
+    const [character, setCharacter] = useState(null); // Este es el estado que se edita
+    
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(''); // Estado para manejar errores
+    const [isSaving, setIsSaving] = useState(false);
+    const [error, setError] = useState('');
     const [activeTab, setActiveTab] = useState('main');
+
+    const isDirty = useMemo(() => {
+        if (!originalCharacter || !character) return false;
+        return !isEqual(originalCharacter, character);
+    }, [originalCharacter, character]);
 
     useEffect(() => {
         if (status === 'unauthenticated') {
             router.push('/login');
-            return;
         }
-        
-        if (status === 'authenticated' && !character) {
-            fetch('/api/character') // La URL es correcta
-                .then(async (res) => {
-                    if (!res.ok) {
-                        const errorData = await res.json().catch(() => ({}));
-                        throw new Error(errorData.message || `Error ${res.status}`);
-                    }
+        if (status === 'authenticated' && !originalCharacter) {
+            setLoading(true);
+            fetch('/api/character')
+                .then(res => {
+                    if (!res.ok) throw new Error('No se encontró la hoja de personaje. ¿Has creado una?');
                     return res.json();
                 })
-                .then((data) => {
-                    setCharacter(data);
+                .then(data => {
+                    setOriginalCharacter(data);
+                    setCharacter(data); // Inicializa ambos estados
                 })
-                .catch(err => {
-                    console.error("Failed to fetch character sheet:", err);
-                    setError(err.message); // Guardamos el mensaje de error
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
+                .catch(err => setError(err.message))
+                .finally(() => setLoading(false));
         }
-    }, [status, router, character]);
+    }, [status, router, originalCharacter]);
 
-    const handleStatUpdate = (statName, updatedStat) => {
-        setCharacter(prev => ({ ...prev, [statName]: updatedStat }));
+    const handleUpdate = (updatedFields) => {
+        setCharacter(prev => ({ ...prev, ...updatedFields }));
     };
 
-    const handleFieldUpdate = (updatedCharacterData) => {
-        setCharacter(prev => ({ ...prev, ...updatedCharacterData }));
-    };
-
-    const handleProficiencyToggle = async (type, name) => {
-        if (!character) return;
-        const currentProficiencies = character[type] || [];
-        const newProficiencies = currentProficiencies.includes(name)
-            ? currentProficiencies.filter(p => p !== name)
-            : [...currentProficiencies, name];
-
-        const res = await fetch('/api/character/update-field', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ field: type, value: newProficiencies }),
-        });
-
-        if (res.ok) {
-            const data = await res.json();
-            setCharacter(data.character);
+    const handleSave = async () => {
+        if (!isDirty) return;
+        setIsSaving(true);
+        try {
+            const res = await fetch('/api/character/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(character),
+            });
+            if (!res.ok) throw new Error('Error al guardar los cambios.');
+            const savedCharacter = await res.json();
+            setOriginalCharacter(savedCharacter); // Sincroniza el estado original
+            setCharacter(savedCharacter); // Y el estado de edición
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const abilityModifiers = useMemo(() => {
         if (!character) return {};
         const modifiers = {};
-        SAVING_THROWS.forEach(ability => {
-            const stat = character[ability.toLowerCase()];
+        const abilities = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma'];
+        abilities.forEach(ability => {
+            const stat = character[ability];
             if (!stat) return;
-            const total = stat.base + (stat.modifications?.reduce((acc, mod) => acc + mod.value, 0) || 0);
+            const total = (stat.base || 0) + (stat.modifications?.reduce((acc, mod) => acc + mod.value, 0) || 0);
             modifiers[ability] = Math.floor((total - 10) / 2);
         });
         return modifiers;
     }, [character]);
 
-    if (loading || status === 'loading') {
-        return <p>Cargando tu leyenda...</p>;
-    }
-
-    // Si hubo un error al cargar, lo mostramos
-    if (error) {
-        return <p style={{ color: 'var(--color-failure-red)' }}>Error al cargar la hoja: {error}</p>;
-    }
-    
-    // Si no hay personaje después de cargar, mostramos un mensaje útil
-    if (!character) {
-        return <p>No se pudo cargar la hoja de personaje. Es posible que no se haya creado una para tu cuenta.</p>;
-    }
+    if (loading || status === 'loading') return <p>Cargando tu leyenda...</p>;
+    if (error) return <p style={{ color: 'var(--color-failure-red)' }}>Error: {error}</p>;
+    if (!character) return <p>No se pudo cargar la hoja de personaje.</p>;
 
     return (
         <div>
+            <div className="save-bar">
+                <span>{isDirty ? 'Tienes cambios sin guardar.' : 'Todos los cambios guardados.'}</span>
+                <button onClick={handleSave} disabled={!isDirty || isSaving}>
+                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+            </div>
+
             <div className="sheet-header">
-                <EditableField fieldName="characterName" label="Character Name" initialValue={character.characterName} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="classAndLevel" label="Class & Level" initialValue={character.classAndLevel} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="background" label="Background" initialValue={character.background} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="playerName" label="Player Name" initialValue={character.playerName} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="race" label="Race" initialValue={character.race} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="alignment" label="Alignment" initialValue={character.alignment} onUpdate={handleFieldUpdate} />
-                <EditableField fieldName="experiencePoints" label="Experience Points" type="number" initialValue={character.experiencePoints} onUpdate={handleFieldUpdate} />
+                <EditableField fieldName="characterName" label="Nombre del Personaje" value={character.characterName} onUpdate={handleUpdate} />
+                <EditableField fieldName="classAndLevel" label="Clase y Nivel" value={character.classAndLevel} onUpdate={handleUpdate} />
+                <EditableField fieldName="background" label="Trasfondo" value={character.background} onUpdate={handleUpdate} />
+                <EditableField fieldName="playerName" label="Nombre del Jugador" value={character.playerName} onUpdate={handleUpdate} />
+                <EditableField fieldName="race" label="Raza" value={character.race} onUpdate={handleUpdate} />
+                <EditableField fieldName="alignment" label="Alineamiento" value={character.alignment} onUpdate={handleUpdate} />
+                <EditableField fieldName="experiencePoints" label="Puntos de Experiencia" type="number" value={character.experiencePoints} onUpdate={handleUpdate} />
             </div>
 
             <div className="tabs-nav">
-                <button onClick={() => setActiveTab('main')} className={activeTab === 'main' ? 'active' : ''}>Main Stats</button>
-                <button onClick={() => setActiveTab('backstory')} className={activeTab === 'backstory' ? 'active' : ''}>Appearance & Backstory</button>
-                <button onClick={() => setActiveTab('spells')} className={activeTab === 'spells' ? 'active' : ''}>Spellcasting</button>
+                <button onClick={() => setActiveTab('main')} className={activeTab === 'main' ? 'active' : ''}>Principal</button>
+                <button onClick={() => setActiveTab('backstory')} className={activeTab === 'backstory' ? 'active' : ''}>Apariencia e Historia</button>
+                <button onClick={() => setActiveTab('spells')} className={activeTab === 'spells' ? 'active' : ''}>Conjuros</button>
             </div>
 
             <div className="tab-content">
@@ -122,16 +116,14 @@ export default function SheetPage() {
                     <CharacterPageMain
                         character={character}
                         abilityModifiers={abilityModifiers}
-                        onStatUpdate={handleStatUpdate}
-                        onFieldUpdate={handleFieldUpdate}
-                        onProficiencyToggle={handleProficiencyToggle}
+                        onUpdate={handleUpdate}
                     />
                 )}
                 {activeTab === 'backstory' && (
-                    <CharacterPageBackstory character={character} onUpdate={handleFieldUpdate} />
+                    <CharacterPageBackstory character={character} onUpdate={handleUpdate} />
                 )}
                 {activeTab === 'spells' && (
-                    <CharacterPageSpells character={character} onUpdate={handleFieldUpdate} />
+                    <CharacterPageSpells character={character} onUpdate={handleUpdate} />
                 )}
             </div>
         </div>

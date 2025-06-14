@@ -1,66 +1,54 @@
 import dbConnect from '../../lib/mongodb';
-import User from '../../models/User';
 import Character from '../../models/Character';
-import Link from 'next/link';
 
-async function getPlayers() {
+async function getAllModifications() {
     await dbConnect();
-    const users = await User.find({}).lean();
-    // Obtenemos solo los IDs de los usuarios que SÍ tienen un personaje
-    const characters = await Character.find({}).select('userId').lean();
-    const userIdsWithCharacter = new Set(characters.map(c => c.userId.toString()));
+    const characters = await Character.find({}).populate('userId', 'name').lean();
+    
+    const allLogs = [];
+    characters.forEach(char => {
+        if (!char.userId) return;
+        const playerName = char.userId.name;
+        
+        Object.keys(char).forEach(statKey => {
+            const stat = char[statKey];
+            if (stat && Array.isArray(stat.modifications) && stat.modifications.length > 0) {
+                stat.modifications.forEach(mod => {
+                    allLogs.push({
+                        id: `${char._id}-${statKey}-${mod._id}`,
+                        playerName,
+                        characterName: char.characterName,
+                        stat: statKey,
+                        value: mod.value,
+                        reason: mod.reason,
+                        date: mod.date,
+                    });
+                });
+            }
+        });
+    });
 
-    const populatedUsers = users.map(user => ({
-        ...user,
-        hasCharacter: userIdsWithCharacter.has(user._id.toString())
-    }));
-
-    return JSON.parse(JSON.stringify(populatedUsers));
+    allLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+    return JSON.parse(JSON.stringify(allLogs));
 }
 
-export default async function AdminPlayersPage() {
-    const players = await getPlayers();
+export default async function AdminLogsPage() {
+    const logs = await getAllModifications();
 
     return (
-        <div>
-            <h2>Todos los Jugadores</h2>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                    <tr style={{ backgroundColor: 'var(--color-earth-brown)', color: 'var(--color-parchment)'}}>
-                        <th style={{padding: '10px', textAlign: 'left'}}>Nombre de Jugador</th>
-                        <th style={{padding: '10px', textAlign: 'left'}}>Email</th>
-                        <th style={{padding: '10px', textAlign: 'left'}}>Rol</th>
-                        <th style={{padding: '10px', textAlign: 'left'}}>Hoja de Personaje</th>
-                        <th style={{padding: '10px', textAlign: 'left'}}>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {players.map(player => (
-                        <tr key={player._id} style={{ borderBottom: '1px solid var(--color-old-gold)'}}>
-                            <td style={{padding: '10px'}}>{player.name}</td>
-                            <td style={{padding: '10px'}}>{player.email}</td>
-                            <td style={{padding: '10px'}}>{player.role}</td>
-                            <td style={{padding: '10px'}}>
-                                {player.hasCharacter ? 
-                                    <span style={{color: 'var(--color-success-green)'}}>✓ Existente</span> : 
-                                    <span style={{color: 'var(--color-failure-red)'}}>✗ No Creada</span>
-                                }
-                            </td>
-                            <td style={{padding: '10px'}}>
-                                {player.hasCharacter ? (
-                                    <Link href={`/admin/players/${player._id}/edit`}>
-                                        <button style={{width: 'auto', padding: '5px 10px'}}>Editar Hoja</button>
-                                    </Link>
-                                ) : (
-                                    <button style={{width: 'auto', padding: '5px 10px', backgroundColor: '#aaa', cursor: 'not-allowed'}} disabled>
-                                        Editar Hoja
-                                    </button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="sheet-box">
+            <h2>Log Global de Modificaciones</h2>
+            <ul className="admin-logs-list">
+                {logs.map((log) => (
+                    <li key={log.id} className="admin-log-item">
+                        <strong>{log.playerName}</strong> ({log.characterName}) modificó <strong>{log.stat}</strong>:
+                        <span className={log.value > 0 ? 'mod-pos' : 'mod-neg'}>
+                            {log.value > 0 ? ` +${log.value}` : ` ${log.value}`}
+                        </span>
+                        por '{log.reason}' el <em>{new Date(log.date).toLocaleString()}</em>
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 }

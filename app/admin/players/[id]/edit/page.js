@@ -1,124 +1,136 @@
+// app/admin/players/[id]/edit/page.js
+// --- REEMPLAZAR ARCHIVO COMPLETO ---
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
+import isEqual from 'lodash/isEqual';
+import { calculateAbilityModifiers } from '../../../utils/character-utils';
 
-const STATS = ['strength', 'dexterity', 'constitution', 'intelligence', 'wisdom', 'charisma', 'armorClass', 'initiative', 'speed', 'hitPointMaximum'];
+// Componentes reutilizados
+import CharacterPageMain from '../../../components/CharacterPageMain';
+import CharacterPageBackstory from '../../../components/CharacterPageBackstory';
+import CharacterPageSpells from '../../../components/CharacterPageSpells';
+import EditableField from '../../../components/EditableField';
 
 export default function AdminEditPlayerPage() {
     const params = useParams();
     const userId = params.id;
 
+    const [originalCharacter, setOriginalCharacter] = useState(null);
     const [character, setCharacter] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [activeTab, setActiveTab] = useState('main');
+
+    const isDirty = useMemo(() => {
+        if (!originalCharacter || !character) return false;
+        return !isEqual(originalCharacter, character);
+    }, [originalCharacter, character]);
 
     useEffect(() => {
-        if (typeof userId === 'string' && userId) {
+        if (userId) {
+            setLoading(true);
             fetch(`/api/admin/players/${userId}`)
                 .then(async (res) => {
                     if (!res.ok) {
-                        const errorData = await res.json().catch(() => ({ message: 'Failed to parse error response.' }));
-                        throw new Error(`Error ${res.status}: ${errorData.message || 'Failed to fetch character data'}`);
+                        const errorData = await res.json().catch(() => ({ message: 'Error al obtener los datos del personaje.' }));
+                        throw new Error(errorData.message);
                     }
                     return res.json();
                 })
-                .then(data => setCharacter(data))
+                .then(data => {
+                    setOriginalCharacter(data);
+                    setCharacter(data);
+                })
                 .catch(err => setError(err.message))
                 .finally(() => setLoading(false));
-        } else if (userId) {
-            setError("ID de usuario inválido en la URL.");
-            setLoading(false);
         }
     }, [userId]);
 
-    const handleInputChange = (e) => {
-        const { name, value, type } = e.target;
-        const val = type === 'number' ? Number(value) : value;
-
-        if (name.includes('.')) {
-            const [statName, field] = name.split('.');
-            setCharacter(prev => ({
-                ...prev,
-                [statName]: {
-                    ...prev[statName],
-                    [field]: val
-                }
-            }));
-        } else {
-            setCharacter(prev => ({ ...prev, [name]: val }));
-        }
+    const handleUpdate = (updatedFields) => {
+        setCharacter(prev => ({ ...prev, ...updatedFields }));
     };
 
-    const handleSave = async (e) => {
-        e.preventDefault();
+    const handleSave = async () => {
+        if (!isDirty) return;
+        setIsSaving(true);
         setError('');
         setSuccess('');
 
-        const res = await fetch(`/api/admin/players/${userId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(character),
-        });
-
-        if (res.ok) {
-            setSuccess('¡Personaje actualizado con éxito!');
-            setTimeout(() => setSuccess(''), 3000);
-        } else {
-            const data = await res.json();
-            setError(data.message || 'Error al actualizar el personaje.');
+        try {
+            const res = await fetch(`/api/admin/players/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(character),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'Error al guardar los cambios.');
+            }
+            const savedCharacter = await res.json();
+            setOriginalCharacter(savedCharacter.character);
+            setCharacter(savedCharacter.character);
+            setSuccess('¡Hoja actualizada con éxito!');
+            setTimeout(() => setSuccess(''), 4000);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
+    const abilityModifiers = useMemo(() => calculateAbilityModifiers(character), [character]);
+
     if (loading) return <p>Cargando datos del jugador...</p>;
-    if (error) return <p style={{ color: 'var(--color-failure-red)' }}>{error}</p>;
-    if (!character) return <p>No se encontraron datos para este jugador.</p>;
+    if (error && !character) return <p style={{ color: 'var(--color-failure-red)' }}>Error: {error}</p>;
+    if (!character) return <p>No se encontraron datos de personaje para este jugador.</p>;
 
     return (
-        <div className="form-container" style={{ maxWidth: '900px', margin: '0 auto' }}>
-            <h2>Editando Hoja de {character.characterName || 'Jugador sin nombre'}</h2>
-            <p>Aquí puedes editar los valores base del personaje. Las modificaciones de los jugadores (+n/-n) se mantendrán.</p>
-            
-            <form onSubmit={handleSave}>
-                <h3>Información General</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div>
-                        <label>Nombre del Personaje</label>
-                        <input name="characterName" value={character.characterName || ''} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                        <label>Clase y Nivel</label>
-                        <input name="classAndLevel" value={character.classAndLevel || ''} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                        <label>Raza</label>
-                        <input name="race" value={character.race || ''} onChange={handleInputChange} />
-                    </div>
-                    <div>
-                        <label>Puntos de Experiencia</label>
-                        <input name="experiencePoints" type="number" value={character.experiencePoints || 0} onChange={handleInputChange} />
-                    </div>
-                </div>
-                
-                <h3 style={{marginTop: '30px'}}>Estadísticas Base</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-                    {STATS.map(stat => (
-                        <div key={stat}>
-                            <label style={{textTransform: 'capitalize'}}>{stat} (Base)</label>
-                            <input 
-                                name={`${stat}.base`} 
-                                type="number" 
-                                value={character[stat]?.base || 0} 
-                                onChange={handleInputChange} 
-                            />
-                        </div>
-                    ))}
-                </div>
+        <div>
+            <div className="save-bar">
+                <span>{isDirty ? 'Hay cambios sin guardar.' : 'Todos los cambios guardados.'}</span>
+                {error && <span style={{ color: 'var(--color-failure-red)', marginLeft: '20px' }}>{error}</span>}
+                {success && <span style={{ color: 'var(--color-success-green)', marginLeft: '20px' }}>{success}</span>}
+                <button onClick={handleSave} disabled={!isDirty || isSaving}>
+                    {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+            </div>
 
-                <button type="submit" style={{ marginTop: '30px', width: '100%' }}>Guardar Cambios</button>
-                {success && <p style={{ color: 'var(--color-success-green)', marginTop: '10px', textAlign: 'center' }}>{success}</p>}
-            </form>
+            <div className="sheet-header">
+                <EditableField fieldName="characterName" label="Nombre del Personaje" value={character.characterName} onUpdate={handleUpdate} />
+                <EditableField fieldName="classAndLevel" label="Clase y Nivel" value={character.classAndLevel} onUpdate={handleUpdate} />
+                <EditableField fieldName="background" label="Trasfondo" value={character.background} onUpdate={handleUpdate} />
+                <EditableField fieldName="playerName" label="Nombre del Jugador" value={character.playerName} onUpdate={handleUpdate} />
+                <EditableField fieldName="race" label="Raza" value={character.race} onUpdate={handleUpdate} />
+                <EditableField fieldName="alignment" label="Alineamiento" value={character.alignment} onUpdate={handleUpdate} />
+                <EditableField fieldName="experiencePoints" label="Puntos de Experiencia" type="number" value={character.experiencePoints} onUpdate={handleUpdate} />
+            </div>
+
+            <div className="tabs-nav">
+                <button onClick={() => setActiveTab('main')} className={activeTab === 'main' ? 'active' : ''}>Principal</button>
+                <button onClick={() => setActiveTab('backstory')} className={activeTab === 'backstory' ? 'active' : ''}>Apariencia e Historia</button>
+                <button onClick={() => setActiveTab('spells')} className={activeTab === 'spells' ? 'active' : ''}>Conjuros</button>
+            </div>
+
+            <div className="tab-content">
+                {activeTab === 'main' && (
+                    <CharacterPageMain
+                        character={character}
+                        abilityModifiers={abilityModifiers}
+                        onUpdate={handleUpdate}
+                    />
+                )}
+                {activeTab === 'backstory' && (
+                    <CharacterPageBackstory character={character} onUpdate={handleUpdate} />
+                )}
+                {activeTab === 'spells' && (
+                    <CharacterPageSpells character={character} onUpdate={handleUpdate} />
+                )}
+            </div>
         </div>
     );
 }

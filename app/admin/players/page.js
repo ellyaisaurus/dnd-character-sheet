@@ -52,16 +52,19 @@ export default async function AdminPlayersPage() {
                                     </span>
                                 </td>
                                 <td>
-                                    {player.hasCharacter ? (
-                                        <Link href={`/admin/players/${player._id}/edit`}>
-                                            <button className="action-button">Editar Hoja</button>
-                                        </Link>
-                                    ) : (
-                                        <button className="action-button" disabled>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <Link href={`/admin/players/${player._id}/view`}>
+                                        <button className="action-button" disabled={!player.hasCharacter}>
+                                            Ver Hoja
+                                        </button>
+                                    </Link>
+                                    <Link href={`/admin/players/${player._id}/edit`}>
+                                        <button className="action-button" disabled={!player.hasCharacter}>
                                             Editar Hoja
                                         </button>
-                                    )}
-                                </td>
+                                    </Link>
+                                </div>
+                            </td>
                             </tr>
                         ))}
                     </tbody>

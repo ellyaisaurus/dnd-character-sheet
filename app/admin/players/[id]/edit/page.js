@@ -1,18 +1,18 @@
 // app/admin/players/[id]/edit/page.js
-// --- REEMPLAZAR ARCHIVO COMPLETO ---
+// --- CÓDIGO CORREGIDO ---
 
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import isEqual from 'lodash/isEqual';
-import { calculateAbilityModifiers } from '../../../utils/character-utils';
-
-// Componentes reutilizados
-import CharacterPageMain from '../../../components/CharacterPageMain';
-import CharacterPageBackstory from '../../../components/CharacterPageBackstory';
-import CharacterPageSpells from '../../../components/CharacterPageSpells';
-import EditableField from '../../../components/EditableField';
+// --- RUTAS DE IMPORTACIÓN CORREGIDAS ---
+import { calculateAbilityModifiers } from '@/app/utils/character-utils';
+import CharacterPageMain from '@/app/components/CharacterPageMain';
+import CharacterPageBackstory from '@/app/components/CharacterPageBackstory';
+import CharacterPageSpells from '@/app/components/CharacterPageSpells';
+import EditableField from '@/app/components/EditableField';
+// --- FIN DE CORRECCIÓN DE RUTAS ---
 
 export default function AdminEditPlayerPage() {
     const params = useParams();

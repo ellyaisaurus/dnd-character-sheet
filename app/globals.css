@@ -882,3 +882,132 @@ textarea.sheet-textarea {
 .admin-log-item strong {
   color: var(--color-deep-maroon);
 }
+
+/* --- ESTILOS RESPONSIVOS PARA MÓVILES (768px o menos) --- */
+@media (max-width: 768px) {
+
+  /* --- AJUSTES GENERALES --- */
+  .container {
+    padding: 15px; /* Un poco menos de padding en móviles */
+  }
+
+  h1, .hero-section h1 {
+    font-size: 2.5rem; /* Reducimos el tamaño de los títulos principales */
+  }
+
+  h2, .features-section h2 {
+    font-size: 2rem; /* Reducimos el tamaño de los subtítulos */
+  }
+
+  /* --- BARRA DE NAVEGACIÓN MÓVIL --- */
+  .main-nav {
+    padding: 1rem 1.5rem;
+    position: relative; /* Necesario para posicionar el menú desplegable */
+  }
+
+  .nav-links-container {
+    /* Ocultamos el menú de escritorio y lo preparamos para ser un menú desplegable */
+    display: none; /* Lo ocultamos por defecto */
+    position: absolute;
+    top: 100%; /* Justo debajo de la barra de navegación */
+    left: 0;
+    right: 0;
+    background-color: var(--color-earth-brown);
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 0;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 200; /* Asegura que esté por encima de otro contenido */
+  }
+
+  .nav-links-container.active {
+    display: flex; /* Lo mostramos cuando el menú está activo */
+  }
+
+  .nav-link {
+    width: 100%;
+    text-align: center;
+    padding: 15px 0;
+    font-size: 1.2rem;
+  }
+
+  .nav-link:hover {
+    background-color: rgba(166, 139, 90, 0.2); /* Hover con color old-gold */
+    color: var(--color-old-gold);
+  }
+
+  /* El botón de hamburguesa (lo crearemos en el componente Navbar) */
+  .nav-toggle {
+    display: block; /* Lo mostramos solo en móvil */
+    background: none;
+    border: none;
+    color: var(--color-parchment);
+    font-size: 2rem;
+    cursor: pointer;
+    padding: 0;
+  }
+
+
+  /* --- PÁGINA DE INICIO (HOME) --- */
+  .hero-section .subtitle {
+    font-size: 1.1rem;
+  }
+
+  .button-group {
+    flex-direction: column; /* Apilamos los botones verticalmente */
+    align-items: center;
+    gap: 15px;
+  }
+
+  .cta-button {
+    width: 100%;
+    max-width: 300px; /* Un ancho máximo para los botones */
+    font-size: 1.2rem;
+    padding: 12px 30px;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr; /* Forzamos una sola columna */
+    gap: 25px;
+  }
+
+  /* --- HOJA DE PERSONAJE --- */
+  .character-sheet-grid,
+  .sheet-main-grid {
+    grid-template-columns: 1fr; /* Convertimos todos los grids a una sola columna */
+  }
+  
+  .sheet-header {
+      grid-template-columns: 1fr; /* También el header de la hoja */
+  }
+
+  .skills-list li, .saving-throws-list li {
+    grid-template-columns: 20px 40px 1fr 45px; /* Ajustamos columnas para mejor encaje */
+    gap: 5px;
+  }
+  
+  .combat-stats-grid {
+    grid-template-columns: 1fr; /* Apilamos las estadísticas de combate */
+    gap: 15px;
+  }
+  
+  /* --- PANEL DE ADMINISTRACIÓN --- */
+  /* Para tablas, es mejor permitir el scroll horizontal si no caben */
+  .admin-table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  }
+
+  .admin-table {
+      min-width: 600px; /* Un ancho mínimo para que la tabla no se comprima demasiado */
+  }
+
+  .admin-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-nav-button {
+    text-align: center;
+  }
+}
